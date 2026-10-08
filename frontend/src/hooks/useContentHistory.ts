@@ -1,10 +1,26 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { HistoryItem, ToolType } from '../types'
 
 const MAX_HISTORY = 50
+const STORAGE_KEY = 'contentai-history'
+
+function loadHistory(): HistoryItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as HistoryItem[]
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_HISTORY) : []
+  } catch {
+    return []
+  }
+}
 
 export function useContentHistory() {
-  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory())
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+  }, [history])
 
   const addToHistory = useCallback(
     (tool: ToolType, input: Record<string, string>, output: string) => {

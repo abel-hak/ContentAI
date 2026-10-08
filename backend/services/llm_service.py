@@ -13,7 +13,7 @@ async def _chat(prompt: str) -> str:
         temperature=0.7,
         max_tokens=4096,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content or ""
 
 
 async def generate_blog_outline(topic: str, tone: str, length: str) -> str:

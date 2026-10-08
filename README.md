@@ -8,25 +8,30 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-LPU_Inference-F55036?style=for-the-badge&logo=groq&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
 **A sleek, AI-powered content generation dashboard featuring blog outline generation, email rewriting, and social media post creation — powered by Groq's ultra-fast LPU inference with Llama 3.3 70B.**
 
-[Features](#features) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [API Endpoints](#api-endpoints) • [Screenshots](#screenshots)
+[Features](#features) • [Why I Built This](#why-i-built-this) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [Deploy](#deploy) • [API Endpoints](#api-endpoints)
 
 </div>
 
 ---
 
+## Why I Built This
+
+Content creators and freelancers often jump between ChatGPT tabs, copy-paste drafts, and lose previous generations. ContentAI packages three high-demand writing tools into one focused dashboard with tone controls, copy-to-clipboard, and persistent history — the kind of AI product UX clients ask for on Upwork and freelance projects.
+
 ## Features
 
-- **Blog Outline Generator** — Input a topic, choose a tone and length, and receive a structured, SEO-friendly blog outline with sections, sub-points, and keyword suggestions.
-- **Email Rewriter** — Paste a draft email and select a desired tone. Get a polished, rewritten version that keeps the original intent while improving clarity and style.
-- **Social Media Post Generator** — Generate 3 platform-optimized post ideas for Twitter/X, LinkedIn, Instagram, Facebook, or Threads with proper hashtags and formatting.
-- **Tone & Style Controls** — Choose from 6 tones: Formal, Casual, Persuasive, Professional, Friendly, and Witty.
-- **Copy to Clipboard** — One-click copy on all generated outputs.
-- **Content History** — All generated content is saved in a session history sidebar with expand, copy, and delete controls.
-- **Dark Glassmorphism UI** — Modern dark theme with backdrop blur, gradient accents, and smooth animations.
-- **Fully Responsive** — Desktop sidebar layout with mobile slide-out panel.
+- **Blog Outline Generator** — Topic + tone + length → structured, SEO-friendly outline
+- **Email Rewriter** — Draft email + desired tone → clearer, polished rewrite
+- **Social Media Post Generator** — Topic + platform + tone → 3 platform-ready post ideas
+- **Tone & Style Controls** — Formal, Casual, Persuasive, Professional, Friendly, Witty
+- **Copy to Clipboard** — One-click copy on every output
+- **Persistent Content History** — Saved in localStorage across page refreshes
+- **Dark Glassmorphism UI** — Backdrop blur, gradient accents, smooth animations
+- **Fully Responsive** — Desktop sidebar + mobile slide-out history panel
 
 ## Tech Stack
 
@@ -37,6 +42,7 @@
 | **Groq** | Ultra-fast LPU inference (Llama 3.3 70B) |
 | **Pydantic v2** | Request/response validation and serialization |
 | **Uvicorn** | ASGI server |
+| **Pytest** | API tests with mocked LLM calls |
 
 ### Frontend
 | Technology | Purpose |
@@ -61,7 +67,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ContentAI.git
+git clone https://github.com/abel-hak/ContentAI.git
 cd ContentAI
 ```
 
@@ -69,24 +75,17 @@ cd ContentAI
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
 
-# Activate it
 # Windows:
 venv\Scripts\activate
 # macOS/Linux:
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
 cp .env.example .env
 # Edit .env and add your GROQ_API_KEY
 
-# Start the server
 uvicorn main:app --reload --port 8000
 ```
 
@@ -94,17 +93,43 @@ uvicorn main:app --reload --port 8000
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server (proxies API to localhost:8000)
 npm run dev
 ```
 
 ### 4. Open the App
 
-Visit **http://localhost:3000** in your browser.
+Visit **http://127.0.0.1:3000**
+
+### 5. Run Backend Tests
+
+```bash
+cd backend
+pytest -q
+```
+
+## Deploy
+
+### Backend (Render)
+
+1. Push this repo to GitHub
+2. Create a new **Web Service** on [Render](https://render.com) (or use `render.yaml`)
+3. Set root directory to `backend`
+4. Build: `pip install -r requirements.txt`
+5. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Add env vars:
+   - `GROQ_API_KEY`
+   - `GROQ_MODEL=llama-3.3-70b-versatile`
+   - `CORS_ORIGINS=https://YOUR_VERCEL_APP.vercel.app`
+
+### Frontend (Vercel)
+
+1. Import the `frontend` folder on [Vercel](https://vercel.com)
+2. Set env var:
+   - `VITE_API_URL=https://YOUR_RENDER_SERVICE.onrender.com/api`
+3. Deploy
+
+After both are live, put the Vercel URL in your Upwork portfolio and README.
 
 ## API Endpoints
 
@@ -128,40 +153,45 @@ curl -X POST http://localhost:8000/api/generate/blog-outline \
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `GROQ_API_KEY` | Yes | — | Groq API key |
-| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Model to use for generation |
+| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Model used for generation |
+| `CORS_ORIGINS` | No | localhost origins | Comma-separated allowed frontend URLs |
+| `VITE_API_URL` | Prod only | `/api` | Frontend API base URL |
 
 ## Project Structure
 
 ```
 ContentAI/
 ├── backend/
-│   ├── main.py              # FastAPI app entry point
-│   ├── config.py             # Settings & environment config
-│   ├── requirements.txt      # Python dependencies
-│   ├── .env.example          # Environment template
-│   ├── models/
-│   │   └── schemas.py        # Pydantic request/response models
-│   ├── routers/
-│   │   └── generate.py       # API route handlers
-│   └── services/
-│       └── gemini_service.py # Groq LLM integration
+│   ├── main.py
+│   ├── config.py
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── models/schemas.py
+│   ├── routers/generate.py
+│   ├── services/llm_service.py
+│   └── tests/test_api.py
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx           # Main application layout
-│   │   ├── main.tsx          # React entry point
-│   │   ├── index.css         # Tailwind + custom styles
-│   │   ├── components/       # UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── services/         # API client
-│   │   └── types/            # TypeScript interfaces
-│   ├── index.html            # HTML template
-│   └── vite.config.ts        # Vite configuration
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── utils/
+│   ├── vercel.json
+│   └── vite.config.ts
+├── render.yaml
+├── LICENSE
 └── README.md
 ```
 
 ## Screenshots
 
-> Screenshots coming soon — run the project to see the full UI!
+> Add 3–4 screenshots here before pitching on Upwork:
+> 1. Blog outline result (desktop)
+> 2. Email rewriter result
+> 3. Social posts + history sidebar
+> 4. Mobile view
 
 ---
 

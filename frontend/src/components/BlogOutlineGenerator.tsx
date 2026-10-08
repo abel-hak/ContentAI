@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Tone, BlogLength } from '../types'
 import { generateBlogOutline } from '../services/api'
+import { getApiErrorMessage } from '../utils/errors'
 import ToneSelector from './ToneSelector'
 import OutputCard from './OutputCard'
 import LoadingSpinner from './LoadingSpinner'
@@ -37,8 +38,8 @@ export default function BlogOutlineGenerator({ onGenerated }: Props) {
       setOutput(res.outline)
       onGenerated({ topic, tone, length }, res.outline)
       toast.success('Blog outline generated!')
-    } catch {
-      toast.error('Failed to generate outline. Check your API key.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to generate outline.'))
     } finally {
       setLoading(false)
     }

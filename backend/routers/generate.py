@@ -10,7 +10,7 @@ from models.schemas import (
     SocialPostRequest,
     SocialPostResponse,
 )
-from services.gemini_service import (
+from services.llm_service import (
     generate_blog_outline,
     rewrite_email,
     generate_social_post,

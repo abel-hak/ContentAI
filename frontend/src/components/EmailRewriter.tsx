@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Tone } from '../types'
 import { rewriteEmail } from '../services/api'
+import { getApiErrorMessage } from '../utils/errors'
 import ToneSelector from './ToneSelector'
 import OutputCard from './OutputCard'
 import LoadingSpinner from './LoadingSpinner'
@@ -30,8 +31,8 @@ export default function EmailRewriter({ onGenerated }: Props) {
       setOutput(res.rewritten_email)
       onGenerated({ draft_email: draftEmail.substring(0, 60) + '...', tone }, res.rewritten_email)
       toast.success('Email rewritten!')
-    } catch {
-      toast.error('Failed to rewrite email. Check your API key.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to rewrite email.'))
     } finally {
       setLoading(false)
     }

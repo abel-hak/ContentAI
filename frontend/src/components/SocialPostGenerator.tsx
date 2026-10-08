@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Tone, Platform } from '../types'
 import { generateSocialPost } from '../services/api'
+import { getApiErrorMessage } from '../utils/errors'
 import ToneSelector from './ToneSelector'
 import OutputCard from './OutputCard'
 import LoadingSpinner from './LoadingSpinner'
@@ -39,8 +40,8 @@ export default function SocialPostGenerator({ onGenerated }: Props) {
       setOutput(res.posts)
       onGenerated({ topic, platform, tone }, res.posts)
       toast.success('Social posts generated!')
-    } catch {
-      toast.error('Failed to generate posts. Check your API key.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to generate posts.'))
     } finally {
       setLoading(false)
     }
