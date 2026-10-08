@@ -1,6 +1,5 @@
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from main import app
@@ -91,3 +90,29 @@ def test_blog_outline_handles_service_error(mock_generate):
 
     assert response.status_code == 500
     assert "Rate limit exceeded" in response.json()["detail"]
+
+
+@patch("routers.generate.compare_blog_outlines", new_callable=AsyncMock)
+def test_compare_blog_outlines(mock_compare):
+    mock_compare.return_value = [
+        {"tone": "professional", "content": "Outline A"},
+        {"tone": "casual", "content": "Outline B"},
+        {"tone": "witty", "content": "Outline C"},
+    ]
+
+    response = client.post(
+        "/api/generate/compare",
+        json={
+            "tool": "blog-outline",
+            "tones": ["professional", "casual", "witty"],
+            "topic": "AI in Healthcare",
+            "length": "short",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["tool"] == "blog-outline"
+    assert len(data["variants"]) == 3
+    assert data["variants"][0]["tone"] == "professional"
+    mock_compare.assert_awaited_once()

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -25,12 +25,16 @@ class BlogLength(str, Enum):
     long = "long"
 
 
-# --- Blog Outline ---
+class ToolType(str, Enum):
+    blog_outline = "blog-outline"
+    email_rewrite = "email-rewrite"
+    social_post = "social-post"
+
 
 class BlogOutlineRequest(BaseModel):
-    topic: str = Field(..., min_length=3, max_length=500, description="Blog topic")
-    tone: Tone = Field(default=Tone.professional, description="Writing tone")
-    length: BlogLength = Field(default=BlogLength.medium, description="Outline length")
+    topic: str = Field(..., min_length=3, max_length=500)
+    tone: Tone = Field(default=Tone.professional)
+    length: BlogLength = Field(default=BlogLength.medium)
 
 
 class BlogOutlineResponse(BaseModel):
@@ -40,11 +44,9 @@ class BlogOutlineResponse(BaseModel):
     length: str
 
 
-# --- Email Rewriter ---
-
 class EmailRewriteRequest(BaseModel):
-    draft_email: str = Field(..., min_length=10, max_length=5000, description="Draft email to rewrite")
-    tone: Tone = Field(default=Tone.professional, description="Desired tone")
+    draft_email: str = Field(..., min_length=10, max_length=5000)
+    tone: Tone = Field(default=Tone.professional)
 
 
 class EmailRewriteResponse(BaseModel):
@@ -53,12 +55,10 @@ class EmailRewriteResponse(BaseModel):
     applied_tone: str
 
 
-# --- Social Post ---
-
 class SocialPostRequest(BaseModel):
-    topic: str = Field(..., min_length=3, max_length=500, description="Post topic")
-    platform: Platform = Field(default=Platform.twitter, description="Target platform")
-    tone: Tone = Field(default=Tone.casual, description="Writing tone")
+    topic: str = Field(..., min_length=3, max_length=500)
+    platform: Platform = Field(default=Platform.twitter)
+    tone: Tone = Field(default=Tone.casual)
 
 
 class SocialPostResponse(BaseModel):
@@ -68,7 +68,31 @@ class SocialPostResponse(BaseModel):
     tone: str
 
 
-# --- Generic Error ---
+class CompareRequest(BaseModel):
+    tool: ToolType
+    tones: list[Tone] = Field(..., min_length=2, max_length=3)
+    topic: str | None = None
+    length: BlogLength = BlogLength.medium
+    draft_email: str | None = None
+    platform: Platform = Platform.twitter
+
+    @field_validator("tones")
+    @classmethod
+    def unique_tones(cls, value: list[Tone]) -> list[Tone]:
+        if len(set(value)) != len(value):
+            raise ValueError("tones must be unique")
+        return value
+
+
+class CompareVariant(BaseModel):
+    tone: str
+    content: str
+
+
+class CompareResponse(BaseModel):
+    tool: str
+    variants: list[CompareVariant]
+
 
 class ErrorResponse(BaseModel):
     detail: str

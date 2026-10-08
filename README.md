@@ -9,10 +9,11 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-LPU_Inference-F55036?style=for-the-badge&logo=groq&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/abel-hak/ContentAI/ci.yml?branch=main&style=for-the-badge&label=CI)
 
-**A sleek, AI-powered content generation dashboard featuring blog outline generation, email rewriting, and social media post creation — powered by Groq's ultra-fast LPU inference with Llama 3.3 70B.**
+**A sleek, AI-powered content generation dashboard featuring blog outline generation, email rewriting, and social media post creation — powered by Groq's ultra-fast LPU inference with OpenAI GPT-OSS 120B.**
 
-[Features](#features) • [Why I Built This](#why-i-built-this) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [Deploy](#deploy) • [API Endpoints](#api-endpoints)
+[Features](#features) • [Why I Built This](#why-i-built-this) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [Docker](#docker) • [Deploy](#deploy) • [API Endpoints](#api-endpoints)
 
 </div>
 
@@ -27,11 +28,16 @@ Content creators and freelancers often jump between ChatGPT tabs, copy-paste dra
 - **Blog Outline Generator** — Topic + tone + length → structured, SEO-friendly outline
 - **Email Rewriter** — Draft email + desired tone → clearer, polished rewrite
 - **Social Media Post Generator** — Topic + platform + tone → 3 platform-ready post ideas
+- **Real-time Streaming** — Token-by-token SSE responses for a ChatGPT-like feel
+- **Compare Tones Side by Side** — Generate 3 tone variants in parallel with `asyncio.gather`
+- **Content Score Panel** — Readability (Flesch), SEO score, word count, reading time + tips
+- **Export** — Download Markdown or export PDF from any output
 - **Tone & Style Controls** — Formal, Casual, Persuasive, Professional, Friendly, Witty
 - **Copy to Clipboard** — One-click copy on every output
 - **Persistent Content History** — Saved in localStorage across page refreshes
 - **Dark Glassmorphism UI** — Backdrop blur, gradient accents, smooth animations
 - **Fully Responsive** — Desktop sidebar + mobile slide-out history panel
+- **Docker + CI** — One-command stack with GitHub Actions tests/build
 
 ## Tech Stack
 
@@ -39,7 +45,7 @@ Content creators and freelancers often jump between ChatGPT tabs, copy-paste dra
 | Technology | Purpose |
 |---|---|
 | **FastAPI** | High-performance async Python web framework |
-| **Groq** | Ultra-fast LPU inference (Llama 3.3 70B) |
+| **Groq** | Ultra-fast LPU inference (openai/gpt-oss-120b) |
 | **Pydantic v2** | Request/response validation and serialization |
 | **Uvicorn** | ASGI server |
 | **Pytest** | API tests with mocked LLM calls |
@@ -108,6 +114,17 @@ cd backend
 pytest -q
 ```
 
+## Docker
+
+```bash
+# From the repo root (requires backend/.env with GROQ_API_KEY)
+docker compose up --build
+```
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api/health
+- Docs: http://localhost:8000/docs
+
 ## Deploy
 
 ### Backend (Render)
@@ -119,7 +136,7 @@ pytest -q
 5. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 6. Add env vars:
    - `GROQ_API_KEY`
-   - `GROQ_MODEL=llama-3.3-70b-versatile`
+   - `GROQ_MODEL=openai/gpt-oss-120b`
    - `CORS_ORIGINS=https://YOUR_VERCEL_APP.vercel.app`
 
 ### Frontend (Vercel)
@@ -137,8 +154,12 @@ After both are live, put the Vercel URL in your Upwork portfolio and README.
 |---|---|---|
 | `GET` | `/api/health` | Health check + config status |
 | `POST` | `/api/generate/blog-outline` | Generate a blog outline |
+| `POST` | `/api/generate/blog-outline/stream` | Stream a blog outline (SSE) |
 | `POST` | `/api/generate/email-rewrite` | Rewrite an email draft |
+| `POST` | `/api/generate/email-rewrite/stream` | Stream an email rewrite (SSE) |
 | `POST` | `/api/generate/social-post` | Generate social media posts |
+| `POST` | `/api/generate/social-post/stream` | Stream social posts (SSE) |
+| `POST` | `/api/generate/compare` | Compare 2–3 tones in parallel |
 
 ### Example Request
 
@@ -153,7 +174,7 @@ curl -X POST http://localhost:8000/api/generate/blog-outline \
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `GROQ_API_KEY` | Yes | — | Groq API key |
-| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Model used for generation |
+| `GROQ_MODEL` | No | `openai/gpt-oss-120b` | Model used for generation |
 | `CORS_ORIGINS` | No | localhost origins | Comma-separated allowed frontend URLs |
 | `VITE_API_URL` | Prod only | `/api` | Frontend API base URL |
 
@@ -169,6 +190,7 @@ ContentAI/
 │   ├── models/schemas.py
 │   ├── routers/generate.py
 │   ├── services/llm_service.py
+│   ├── Dockerfile
 │   └── tests/test_api.py
 ├── frontend/
 │   ├── src/
@@ -178,8 +200,12 @@ ContentAI/
 │   │   ├── services/
 │   │   ├── types/
 │   │   └── utils/
+│   ├── Dockerfile
+│   ├── nginx.conf
 │   ├── vercel.json
 │   └── vite.config.ts
+├── .github/workflows/ci.yml
+├── docker-compose.yml
 ├── render.yaml
 ├── LICENSE
 └── README.md
@@ -197,6 +223,6 @@ ContentAI/
 
 <div align="center">
 
-**Built with** FastAPI + React + Groq (Llama 3.3 70B)
+**Built with** FastAPI + React + Groq (GPT-OSS 120B)
 
 </div>

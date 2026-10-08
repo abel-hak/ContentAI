@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Columns2, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Tone, BlogLength } from '../types'
-import { generateBlogOutline } from '../services/api'
+import { compareTones, streamBlogOutline } from '../services/api'
 import { getApiErrorMessage } from '../utils/errors'
+import { pickCompareTones } from '../utils/compareTones'
 import ToneSelector from './ToneSelector'
 import OutputCard from './OutputCard'
 import LoadingSpinner from './LoadingSpinner'
+import CompareResults, { type CompareVariant } from './CompareResults'
 
 interface Props {
   onGenerated: (input: Record<string, string>, output: string) => void
@@ -24,6 +26,9 @@ export default function BlogOutlineGenerator({ onGenerated }: Props) {
   const [length, setLength] = useState<BlogLength>('medium')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
+  const [variants, setVariants] = useState<CompareVariant[]>([])
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -31,17 +36,39 @@ export default function BlogOutlineGenerator({ onGenerated }: Props) {
       toast.error('Please enter a topic')
       return
     }
+
     setLoading(true)
     setOutput('')
+    setVariants([])
+    setStreaming(!compareMode)
+
     try {
-      const res = await generateBlogOutline({ topic: topic.trim(), tone, length })
-      setOutput(res.outline)
-      onGenerated({ topic, tone, length }, res.outline)
-      toast.success('Blog outline generated!')
+      if (compareMode) {
+        const tones = pickCompareTones(tone)
+        const results = await compareTones({
+          tool: 'blog-outline',
+          tones,
+          topic: topic.trim(),
+          length,
+        })
+        setVariants(results)
+        const combined = results.map((item) => `## ${item.tone}\n\n${item.content}`).join('\n\n---\n\n')
+        onGenerated({ topic, tone: tones.join(', '), length, mode: 'compare' }, combined)
+        toast.success('Tone comparison ready!')
+      } else {
+        const text = await streamBlogOutline(
+          { topic: topic.trim(), tone, length },
+          (token) => setOutput((prev) => prev + token)
+        )
+        setOutput(text)
+        onGenerated({ topic, tone, length }, text)
+        toast.success('Blog outline generated!')
+      }
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to generate outline.'))
     } finally {
       setLoading(false)
+      setStreaming(false)
     }
   }
 
@@ -84,6 +111,24 @@ export default function BlogOutlineGenerator({ onGenerated }: Props) {
           </div>
         </div>
 
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <input
+            type="checkbox"
+            checked={compareMode}
+            onChange={(e) => setCompareMode(e.target.checked)}
+            className="h-4 w-4 accent-primary-500"
+          />
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-200">
+              <Columns2 size={15} className="text-primary-400" />
+              Compare 3 tones side by side
+            </div>
+            <p className="text-xs text-gray-500">
+              Generates your selected tone plus 2 contrasts in parallel
+            </p>
+          </div>
+        </label>
+
         <button
           type="submit"
           disabled={loading || !topic.trim()}
@@ -95,12 +140,37 @@ export default function BlogOutlineGenerator({ onGenerated }: Props) {
             hover:shadow-primary-500/40 cursor-pointer"
         >
           <Sparkles size={18} />
-          {loading ? 'Generating...' : 'Generate Outline'}
+          {loading
+            ? compareMode
+              ? 'Comparing tones...'
+              : 'Streaming...'
+            : compareMode
+              ? 'Compare Outlines'
+              : 'Generate Outline'}
         </button>
       </form>
 
-      {loading && <LoadingSpinner message="Crafting your blog outline..." />}
-      <OutputCard content={output} onRegenerate={handleSubmit} isLoading={loading} />
+      {loading && !output && variants.length === 0 && (
+        <LoadingSpinner
+          message={
+            compareMode
+              ? 'Generating 3 tone variants in parallel...'
+              : 'Streaming your blog outline...'
+          }
+        />
+      )}
+
+      {variants.length > 0 ? (
+        <CompareResults variants={variants} />
+      ) : (
+        <OutputCard
+          content={output}
+          variant="blog-outline"
+          onRegenerate={handleSubmit}
+          isLoading={loading}
+          isStreaming={streaming}
+        />
+      )}
     </div>
   )
 }

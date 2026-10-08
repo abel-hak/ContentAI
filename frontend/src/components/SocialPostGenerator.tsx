@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Columns2, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Tone, Platform } from '../types'
-import { generateSocialPost } from '../services/api'
+import { compareTones, streamSocialPost } from '../services/api'
 import { getApiErrorMessage } from '../utils/errors'
+import { pickCompareTones } from '../utils/compareTones'
 import ToneSelector from './ToneSelector'
 import OutputCard from './OutputCard'
 import LoadingSpinner from './LoadingSpinner'
+import CompareResults, { type CompareVariant } from './CompareResults'
 
 interface Props {
   onGenerated: (input: Record<string, string>, output: string) => void
@@ -26,6 +28,9 @@ export default function SocialPostGenerator({ onGenerated }: Props) {
   const [tone, setTone] = useState<Tone>('casual')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
+  const [variants, setVariants] = useState<CompareVariant[]>([])
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -33,17 +38,39 @@ export default function SocialPostGenerator({ onGenerated }: Props) {
       toast.error('Please enter a topic')
       return
     }
+
     setLoading(true)
     setOutput('')
+    setVariants([])
+    setStreaming(!compareMode)
+
     try {
-      const res = await generateSocialPost({ topic: topic.trim(), platform, tone })
-      setOutput(res.posts)
-      onGenerated({ topic, platform, tone }, res.posts)
-      toast.success('Social posts generated!')
+      if (compareMode) {
+        const tones = pickCompareTones(tone)
+        const results = await compareTones({
+          tool: 'social-post',
+          tones,
+          topic: topic.trim(),
+          platform,
+        })
+        setVariants(results)
+        const combined = results.map((item) => `## ${item.tone}\n\n${item.content}`).join('\n\n---\n\n')
+        onGenerated({ topic, platform, tone: tones.join(', '), mode: 'compare' }, combined)
+        toast.success('Tone comparison ready!')
+      } else {
+        const text = await streamSocialPost(
+          { topic: topic.trim(), platform, tone },
+          (token) => setOutput((prev) => prev + token)
+        )
+        setOutput(text)
+        onGenerated({ topic, platform, tone }, text)
+        toast.success('Social posts generated!')
+      }
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Failed to generate posts.'))
     } finally {
       setLoading(false)
+      setStreaming(false)
     }
   }
 
@@ -86,6 +113,24 @@ export default function SocialPostGenerator({ onGenerated }: Props) {
 
         <ToneSelector value={tone} onChange={setTone} />
 
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <input
+            type="checkbox"
+            checked={compareMode}
+            onChange={(e) => setCompareMode(e.target.checked)}
+            className="h-4 w-4 accent-primary-500"
+          />
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-200">
+              <Columns2 size={15} className="text-primary-400" />
+              Compare 3 tones side by side
+            </div>
+            <p className="text-xs text-gray-500">
+              Create the same campaign angle in 3 tones at once
+            </p>
+          </div>
+        </label>
+
         <button
           type="submit"
           disabled={loading || !topic.trim()}
@@ -97,12 +142,37 @@ export default function SocialPostGenerator({ onGenerated }: Props) {
             hover:shadow-primary-500/40 cursor-pointer"
         >
           <Sparkles size={18} />
-          {loading ? 'Generating...' : 'Generate Posts'}
+          {loading
+            ? compareMode
+              ? 'Comparing tones...'
+              : 'Streaming...'
+            : compareMode
+              ? 'Compare Posts'
+              : 'Generate Posts'}
         </button>
       </form>
 
-      {loading && <LoadingSpinner message="Creating social media posts..." />}
-      <OutputCard content={output} onRegenerate={handleSubmit} isLoading={loading} />
+      {loading && !output && variants.length === 0 && (
+        <LoadingSpinner
+          message={
+            compareMode
+              ? 'Generating 3 tone variants in parallel...'
+              : 'Streaming social media posts...'
+          }
+        />
+      )}
+
+      {variants.length > 0 ? (
+        <CompareResults variants={variants} />
+      ) : (
+        <OutputCard
+          content={output}
+          variant="social-post"
+          onRegenerate={handleSubmit}
+          isLoading={loading}
+          isStreaming={streaming}
+        />
+      )}
     </div>
   )
 }

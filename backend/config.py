@@ -4,7 +4,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     app_name: str = "ContentAI"
     app_version: str = "1.0.0"
     # Comma-separated origins. Override in production with your Vercel URL.

@@ -49,7 +49,7 @@ export default function App() {
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                 <Zap size={12} className="text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">Groq + Llama 3.3</span>
+                <span className="text-xs font-medium text-emerald-400">Groq + GPT-OSS 120B</span>
               </div>
               <button
                 onClick={() => setShowHistory(!showHistory)}
