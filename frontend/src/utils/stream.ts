@@ -2,7 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 export async function streamGenerate(
   path: string,
-  body: Record<string, unknown>,
+  body: object,
   onToken: (token: string) => void,
   signal?: AbortSignal
 ): Promise<string> {
